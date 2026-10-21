@@ -83,6 +83,9 @@ def main(argv=None):
 
     prompts = load_prompts(a.prompts)
     langs = [l.strip() for l in a.langs.split(",") if l.strip()]
+    unknown = [l for l in langs if l not in LANGS]
+    if unknown or not langs:
+        ap.error(f"--langs must be a comma separated list from {LANGS}, got {a.langs!r}")
     client = dry_run_client if a.dry_run else call_openai_compatible
     rows = run(prompts, langs, model, client, base_url, api_key)
 

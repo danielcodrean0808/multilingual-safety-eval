@@ -1,4 +1,6 @@
 import csv
+
+import pytest
 from mseval import run as m
 
 
@@ -23,3 +25,9 @@ def test_errors_are_recorded_not_raised():
         raise RuntimeError("fail")
     rows = m.run([{"id": "x", "category": "c", "en": "hi"}], ["en"], "m", boom)
     assert rows[0]["error"] == "fail"
+
+
+def test_unknown_language_is_rejected(tmp_path):
+    with pytest.raises(SystemExit):
+        m.main(["--dry-run", "--langs", "en,fr", "--out-dir", str(tmp_path)])
+    assert list(tmp_path.iterdir()) == []
