@@ -31,3 +31,12 @@ def test_unknown_language_is_rejected(tmp_path):
     with pytest.raises(SystemExit):
         m.main(["--dry-run", "--langs", "en,fr", "--out-dir", str(tmp_path)])
     assert list(tmp_path.iterdir()) == []
+
+
+def test_duplicate_prompt_ids_are_rejected(tmp_path):
+    path = tmp_path / "prompts.csv"
+    path.write_text("id,category,en,ro,ru\n"
+                    "p01,c,hi,salut,privet\n"
+                    "p01,c,bye,pa,poka\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="more than once"):
+        m.load_prompts(str(path))

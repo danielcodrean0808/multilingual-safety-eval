@@ -14,10 +14,14 @@ FIELDS = ["timestamp", "model", "prompt_id", "category", "lang", "prompt", "resp
 def load_prompts(path):
     with open(path, newline="", encoding="utf-8") as f:
         rows = list(csv.DictReader(f))
+    seen = set()
     for r in rows:
         missing = [k for k in ["id", "category", *LANGS] if not r.get(k)]
         if missing:
             raise ValueError(f"prompt {r.get('id')} is missing {missing}")
+        if r["id"] in seen:
+            raise ValueError(f"prompt id {r['id']} appears more than once in {path}")
+        seen.add(r["id"])
     return rows
 
 
