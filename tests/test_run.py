@@ -40,3 +40,11 @@ def test_duplicate_prompt_ids_are_rejected(tmp_path):
                     "p01,c,bye,pa,poka\n", encoding="utf-8")
     with pytest.raises(ValueError, match="more than once"):
         m.load_prompts(str(path))
+
+
+def test_repeated_language_is_only_run_once(tmp_path):
+    m.main(["--dry-run", "--langs", "en,ro,en", "--out-dir", str(tmp_path)])
+    resp = next(p for p in tmp_path.iterdir() if p.name.startswith("responses_"))
+    rows = list(csv.DictReader(open(resp, encoding="utf-8")))
+    assert len(rows) == len(m.load_prompts("prompts.csv")) * 2
+    assert [r["lang"] for r in rows[:2]] == ["en", "ro"]

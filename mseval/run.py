@@ -86,7 +86,7 @@ def main(argv=None):
         sys.exit("Set MSEVAL_MODEL and MSEVAL_API_KEY (and MSEVAL_BASE_URL if not OpenAI), or use --dry-run.")
 
     prompts = load_prompts(a.prompts)
-    langs = [l.strip() for l in a.langs.split(",") if l.strip()]
+    langs = list(dict.fromkeys(l.strip() for l in a.langs.split(",") if l.strip()))  # drop repeats, keep order
     unknown = [l for l in langs if l not in LANGS]
     if unknown or not langs:
         ap.error(f"--langs must be a comma separated list from {LANGS}, got {a.langs!r}")
