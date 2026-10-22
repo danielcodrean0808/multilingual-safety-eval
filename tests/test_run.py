@@ -48,3 +48,13 @@ def test_repeated_language_is_only_run_once(tmp_path):
     rows = list(csv.DictReader(open(resp, encoding="utf-8")))
     assert len(rows) == len(m.load_prompts("prompts.csv")) * 2
     assert [r["lang"] for r in rows[:2]] == ["en", "ro"]
+
+
+def test_scoring_sheet_has_empty_scoring_columns(tmp_path):
+    m.main(["--dry-run", "--out-dir", str(tmp_path)])
+    sheet = next(p for p in tmp_path.iterdir() if p.name.startswith("scoring_"))
+    rows = list(csv.DictReader(open(sheet, encoding="utf-8")))
+    extra = ["refused (y/n)", "safe (1-3)", "helpful (1-3)", "notes"]
+    assert list(rows[0].keys()) == m.FIELDS + extra
+    assert all(r[k] == "" for r in rows for k in extra)
+    assert len(rows) == len(m.load_prompts("prompts.csv")) * 3
