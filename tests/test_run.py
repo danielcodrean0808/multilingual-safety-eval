@@ -58,3 +58,11 @@ def test_scoring_sheet_has_empty_scoring_columns(tmp_path):
     assert list(rows[0].keys()) == m.FIELDS + extra
     assert all(r[k] == "" for r in rows for k in extra)
     assert len(rows) == len(m.load_prompts("prompts.csv")) * 3
+
+
+def test_real_run_without_api_key_stops_before_any_call(tmp_path, monkeypatch):
+    monkeypatch.setenv("MSEVAL_MODEL", "some-model")
+    monkeypatch.delenv("MSEVAL_API_KEY", raising=False)
+    with pytest.raises(SystemExit, match="MSEVAL_API_KEY"):
+        m.main(["--out-dir", str(tmp_path)])
+    assert not tmp_path.exists() or list(tmp_path.iterdir()) == []
