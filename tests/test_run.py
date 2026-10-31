@@ -76,3 +76,10 @@ def test_model_name_with_slash_makes_safe_file_names(tmp_path, monkeypatch):
     assert names[0].startswith("responses_openai_gpt-4o_mini_")
     assert names[1].startswith("scoring_openai_gpt-4o_mini_")
     assert all("/" not in n and " " not in n for n in names)
+
+
+def test_prompt_missing_a_translation_is_rejected(tmp_path):
+    bad = tmp_path / "prompts.csv"
+    bad.write_text("id,category,en,ro,ru\np1,medical,Hello,Salut,\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="missing"):
+        m.load_prompts(str(bad))
