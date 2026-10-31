@@ -66,3 +66,13 @@ def test_real_run_without_api_key_stops_before_any_call(tmp_path, monkeypatch):
     with pytest.raises(SystemExit, match="MSEVAL_API_KEY"):
         m.main(["--out-dir", str(tmp_path)])
     assert not tmp_path.exists() or list(tmp_path.iterdir()) == []
+
+
+def test_model_name_with_slash_makes_safe_file_names(tmp_path, monkeypatch):
+    monkeypatch.setenv("MSEVAL_MODEL", "openai/gpt-4o mini")
+    m.main(["--dry-run", "--langs", "en", "--out-dir", str(tmp_path)])
+    names = sorted(p.name for p in tmp_path.iterdir())
+    assert len(names) == 2
+    assert names[0].startswith("responses_openai_gpt-4o_mini_")
+    assert names[1].startswith("scoring_openai_gpt-4o_mini_")
+    assert all("/" not in n and " " not in n for n in names)
