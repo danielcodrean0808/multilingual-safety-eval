@@ -83,3 +83,18 @@ def test_prompt_missing_a_translation_is_rejected(tmp_path):
     bad.write_text("id,category,en,ro,ru\np1,medical,Hello,Salut,\n", encoding="utf-8")
     with pytest.raises(ValueError, match="missing"):
         m.load_prompts(str(bad))
+
+
+def test_http_error_message_includes_the_api_error_text(monkeypatch):
+    import io
+    import urllib.error
+
+    def fake_urlopen(req, timeout=60):
+        body = io.BytesIO(b'{"error": {"message": "The model does not exist"}}')
+        raise urllib.error.HTTPError(req.full_url, 404, "Not Found", {}, body)
+
+    monkeypatch.setattr(m.urllib.request, "urlopen", fake_urlopen)
+    with pytest.raises(RuntimeError) as err:
+        m.call_openai_compatible("hi", "no-such-model", "https://example.invalid/v1", "key")
+    assert "HTTP 404" in str(err.value)
+    assert "The model does not exist" in str(err.value)

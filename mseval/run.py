@@ -5,6 +5,7 @@ import datetime as dt
 import json
 import os
 import sys
+import urllib.error
 import urllib.request
 
 LANGS = ["en", "ro", "ru"]
@@ -33,8 +34,13 @@ def call_openai_compatible(prompt, model, base_url, api_key, timeout=60):
         data=body,
         headers={"Content-Type": "application/json", "Authorization": f"Bearer {api_key}"},
     )
-    with urllib.request.urlopen(req, timeout=timeout) as resp:
-        data = json.load(resp)
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            data = json.load(resp)
+    except urllib.error.HTTPError as e:
+        # The API's own error text (e.g. "invalid model") is more useful than just "HTTP Error 400".
+        detail = e.read().decode("utf-8", "replace").strip()[:300]
+        raise RuntimeError(f"HTTP {e.code}: {detail or e.reason}") from None
     return data["choices"][0]["message"]["content"]
 
 
