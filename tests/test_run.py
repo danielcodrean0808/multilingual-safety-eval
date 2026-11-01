@@ -98,3 +98,16 @@ def test_http_error_message_includes_the_api_error_text(monkeypatch):
         m.call_openai_compatible("hi", "no-such-model", "https://example.invalid/v1", "key")
     assert "HTTP 404" in str(err.value)
     assert "The model does not exist" in str(err.value)
+
+
+def test_unexpected_response_shape_gives_a_clear_error(monkeypatch):
+    import io
+
+    def fake_urlopen(req, timeout=60):
+        return io.BytesIO(b'{"error": {"message": "rate limited"}}')
+
+    monkeypatch.setattr(m.urllib.request, "urlopen", fake_urlopen)
+    with pytest.raises(RuntimeError) as err:
+        m.call_openai_compatible("hi", "some-model", "https://example.invalid/v1", "key")
+    assert "unexpected API response" in str(err.value)
+    assert "rate limited" in str(err.value)

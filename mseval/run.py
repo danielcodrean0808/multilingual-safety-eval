@@ -41,7 +41,11 @@ def call_openai_compatible(prompt, model, base_url, api_key, timeout=60):
         # The API's own error text (e.g. "invalid model") is more useful than just "HTTP Error 400".
         detail = e.read().decode("utf-8", "replace").strip()[:300]
         raise RuntimeError(f"HTTP {e.code}: {detail or e.reason}") from None
-    return data["choices"][0]["message"]["content"]
+    try:
+        return data["choices"][0]["message"]["content"]
+    except (KeyError, IndexError, TypeError):
+        # Without this the error column would just say "'choices'", which is hard to understand.
+        raise RuntimeError(f"unexpected API response: {json.dumps(data)[:300]}") from None
 
 
 def dry_run_client(prompt, model, base_url, api_key):
