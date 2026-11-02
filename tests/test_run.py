@@ -111,3 +111,10 @@ def test_unexpected_response_shape_gives_a_clear_error(monkeypatch):
         m.call_openai_compatible("hi", "some-model", "https://example.invalid/v1", "key")
     assert "unexpected API response" in str(err.value)
     assert "rate limited" in str(err.value)
+
+
+def test_empty_prompts_file_is_rejected(tmp_path):
+    f = tmp_path / "prompts.csv"
+    f.write_text("id,category,en,ro,ru\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="no prompts"):
+        m.load_prompts(str(f))

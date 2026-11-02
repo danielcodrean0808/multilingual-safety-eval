@@ -15,6 +15,9 @@ FIELDS = ["timestamp", "model", "prompt_id", "category", "lang", "prompt", "resp
 def load_prompts(path):
     with open(path, newline="", encoding="utf-8") as f:
         rows = list(csv.DictReader(f))
+    if not rows:
+        # Otherwise a run would "succeed" and save empty result files.
+        raise ValueError(f"no prompts found in {path}")
     seen = set()
     for r in rows:
         missing = [k for k in ["id", "category", *LANGS] if not r.get(k)]
