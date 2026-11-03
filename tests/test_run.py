@@ -118,3 +118,24 @@ def test_empty_prompts_file_is_rejected(tmp_path):
     f.write_text("id,category,en,ro,ru\n", encoding="utf-8")
     with pytest.raises(ValueError, match="no prompts"):
         m.load_prompts(str(f))
+
+
+def test_successful_call_sends_the_expected_request(monkeypatch):
+    import io
+    import json
+
+    seen = {}
+
+    def fake_urlopen(req, timeout=60):
+        seen["url"] = req.full_url
+        seen["auth"] = req.get_header("Authorization")
+        seen["body"] = json.loads(req.data)
+        return io.BytesIO(b'{"choices": [{"message": {"content": "Hello back"}}]}')
+
+    monkeypatch.setattr(m.urllib.request, "urlopen", fake_urlopen)
+    # A trailing slash on the base URL must not produce a double slash.
+    reply = m.call_openai_compatible("hi", "some-model", "https://example.invalid/v1/", "secret")
+    assert reply == "Hello back"
+    assert seen["url"] == "https://example.invalid/v1/chat/completions"
+    assert seen["auth"] == "Bearer secret"
+    assert seen["body"] == {"model": "some-model", "messages": [{"role": "user", "content": "hi"}]}
