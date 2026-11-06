@@ -39,11 +39,19 @@ def call_openai_compatible(prompt, model, base_url, api_key, timeout=60):
     )
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
-            data = json.load(resp)
+            raw = resp.read()
     except urllib.error.HTTPError as e:
         # The API's own error text (e.g. "invalid model") is more useful than just "HTTP Error 400".
         detail = e.read().decode("utf-8", "replace").strip()[:300]
         raise RuntimeError(f"HTTP {e.code}: {detail or e.reason}") from None
+    except urllib.error.URLError as e:
+        # Timeouts and DNS failures otherwise look like a generic urlopen crash.
+        raise RuntimeError(f"could not reach API: {e.reason}") from None
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError:
+        preview = raw[:200].decode("utf-8", "replace")
+        raise RuntimeError(f"API returned non-JSON: {preview}") from None
     try:
         return data["choices"][0]["message"]["content"]
     except (KeyError, IndexError, TypeError):

@@ -139,3 +139,28 @@ def test_successful_call_sends_the_expected_request(monkeypatch):
     assert seen["url"] == "https://example.invalid/v1/chat/completions"
     assert seen["auth"] == "Bearer secret"
     assert seen["body"] == {"model": "some-model", "messages": [{"role": "user", "content": "hi"}]}
+
+def test_connection_failure_gives_a_clear_error(monkeypatch):
+    import urllib.error
+
+    def fake_urlopen(req, timeout=60):
+        raise urllib.error.URLError("timed out")
+
+    monkeypatch.setattr(m.urllib.request, "urlopen", fake_urlopen)
+    with pytest.raises(RuntimeError) as err:
+        m.call_openai_compatible("hi", "some-model", "https://example.invalid/v1", "key")
+    assert "could not reach API" in str(err.value)
+    assert "timed out" in str(err.value)
+
+
+def test_non_json_response_gives_a_clear_error(monkeypatch):
+    import io
+
+    def fake_urlopen(req, timeout=60):
+        return io.BytesIO(b"<html>Bad Gateway</html>")
+
+    monkeypatch.setattr(m.urllib.request, "urlopen", fake_urlopen)
+    with pytest.raises(RuntimeError) as err:
+        m.call_openai_compatible("hi", "some-model", "https://example.invalid/v1", "key")
+    assert "API returned non-JSON" in str(err.value)
+    assert "Bad Gateway" in str(err.value)
