@@ -20,6 +20,10 @@ def load_prompts(path):
         raise ValueError(f"no prompts found in {path}")
     seen = set()
     for r in rows:
+        # Strip so a cell of only spaces is treated as missing, not as a real prompt.
+        for k in ["id", "category", *LANGS]:
+            if k in r and r[k] is not None:
+                r[k] = r[k].strip()
         missing = [k for k in ["id", "category", *LANGS] if not r.get(k)]
         if missing:
             raise ValueError(f"prompt {r.get('id')} is missing {missing}")
