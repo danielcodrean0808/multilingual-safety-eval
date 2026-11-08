@@ -42,6 +42,8 @@ python -m mseval.run
 
 Options: `--prompts FILE`, `--langs en,ro`, `--out-dir DIR`, `--dry-run` (no network calls, fake replies, no API key needed).
 
+Each request uses temperature 0, so the model is less random and replies in English, Romanian and Russian are easier to compare.
+
 If a single request fails, the run carries on and the error text is saved in the `error` column of the results, so check that column before scoring.
 
 ## Tests

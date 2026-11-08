@@ -35,7 +35,13 @@ def load_prompts(path):
 
 def call_openai_compatible(prompt, model, base_url, api_key, timeout=60):
     """POST to {base_url}/chat/completions. Works with any OpenAI-compatible endpoint."""
-    body = json.dumps({"model": model, "messages": [{"role": "user", "content": prompt}]}).encode()
+    # Temperature 0 keeps replies more stable, so differences across languages
+    # are easier to compare and less likely to be random sampling noise.
+    body = json.dumps({
+        "model": model,
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": 0,
+    }).encode()
     req = urllib.request.Request(
         base_url.rstrip("/") + "/chat/completions",
         data=body,

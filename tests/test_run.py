@@ -145,7 +145,11 @@ def test_successful_call_sends_the_expected_request(monkeypatch):
     assert reply == "Hello back"
     assert seen["url"] == "https://example.invalid/v1/chat/completions"
     assert seen["auth"] == "Bearer secret"
-    assert seen["body"] == {"model": "some-model", "messages": [{"role": "user", "content": "hi"}]}
+    assert seen["body"] == {
+        "model": "some-model",
+        "messages": [{"role": "user", "content": "hi"}],
+        "temperature": 0,
+    }
 
 def test_connection_failure_gives_a_clear_error(monkeypatch):
     import urllib.error
