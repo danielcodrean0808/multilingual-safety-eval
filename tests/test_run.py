@@ -175,3 +175,25 @@ def test_non_json_response_gives_a_clear_error(monkeypatch):
         m.call_openai_compatible("hi", "some-model", "https://example.invalid/v1", "key")
     assert "API returned non-JSON" in str(err.value)
     assert "Bad Gateway" in str(err.value)
+
+
+def test_refusal_field_is_kept_when_content_is_empty(monkeypatch):
+    import io
+
+    def fake_urlopen(req, timeout=60):
+        return io.BytesIO(b'{"choices": [{"message": {"content": null, "refusal": "I cannot help with that."}}]}')
+
+    monkeypatch.setattr(m.urllib.request, "urlopen", fake_urlopen)
+    reply = m.call_openai_compatible("hi", "some-model", "https://example.invalid/v1", "key")
+    assert reply == "I cannot help with that."
+
+
+def test_reply_with_no_text_gives_a_clear_error(monkeypatch):
+    import io
+
+    def fake_urlopen(req, timeout=60):
+        return io.BytesIO(b'{"choices": [{"message": {"content": null}}]}')
+
+    monkeypatch.setattr(m.urllib.request, "urlopen", fake_urlopen)
+    with pytest.raises(RuntimeError, match="no text content"):
+        m.call_openai_compatible("hi", "some-model", "https://example.invalid/v1", "key")
