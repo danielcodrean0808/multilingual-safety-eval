@@ -197,3 +197,16 @@ def test_reply_with_no_text_gives_a_clear_error(monkeypatch):
     monkeypatch.setattr(m.urllib.request, "urlopen", fake_urlopen)
     with pytest.raises(RuntimeError, match="no text content"):
         m.call_openai_compatible("hi", "some-model", "https://example.invalid/v1", "key")
+
+
+def test_run_where_every_request_fails_exits_with_the_error(tmp_path, monkeypatch):
+    monkeypatch.setenv("MSEVAL_MODEL", "some-model")
+    monkeypatch.setenv("MSEVAL_API_KEY", "bad-key")
+
+    def always_fails(*a, **k):
+        raise RuntimeError("HTTP 401: invalid api key")
+    monkeypatch.setattr(m, "call_openai_compatible", always_fails)
+    with pytest.raises(SystemExit, match="Every request failed.*invalid api key"):
+        m.main(["--langs", "en", "--out-dir", str(tmp_path)])
+    # The results are still saved so the errors can be checked.
+    assert len(list(tmp_path.iterdir())) == 2

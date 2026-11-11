@@ -142,6 +142,9 @@ def main(argv=None):
     errors = sum(1 for r in rows if r["error"])
     print(f"Saved {len(rows)} responses ({errors} errors) to {resp}")
     print(f"Scoring sheet: {score}")
+    if rows and errors == len(rows):
+        # Usually a wrong key, model name or URL. Exit non-zero so it is not mistaken for a good run.
+        sys.exit(f"Every request failed. First error: {rows[0]['error']}")
 
 
 if __name__ == "__main__":

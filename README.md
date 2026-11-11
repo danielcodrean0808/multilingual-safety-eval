@@ -46,6 +46,8 @@ Each request uses temperature 0, so the model is less random and replies in Engl
 
 If a single request fails, the run carries on and the error text is saved in the `error` column of the results, so check that column before scoring.
 
+If every request fails (for example a wrong API key or model name), the files are still saved but the run exits with an error showing the first failure.
+
 ## Tests
 ```bash
 python -m pytest
