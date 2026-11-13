@@ -210,3 +210,10 @@ def test_run_where_every_request_fails_exits_with_the_error(tmp_path, monkeypatc
         m.main(["--langs", "en", "--out-dir", str(tmp_path)])
     # The results are still saved so the errors can be checked.
     assert len(list(tmp_path.iterdir())) == 2
+
+
+def test_missing_prompts_file_gives_a_clear_error(tmp_path):
+    with pytest.raises(SystemExit) as exc:
+        m.main(["--dry-run", "--prompts", str(tmp_path / "nope.csv"), "--out-dir", str(tmp_path / "out")])
+    assert "Could not load prompts" in str(exc.value)
+    assert not (tmp_path / "out").exists()

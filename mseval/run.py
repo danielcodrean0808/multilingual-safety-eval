@@ -125,7 +125,11 @@ def main(argv=None):
     if not a.dry_run and not (model and api_key):
         sys.exit("Set MSEVAL_MODEL and MSEVAL_API_KEY (and MSEVAL_BASE_URL if not OpenAI), or use --dry-run.")
 
-    prompts = load_prompts(a.prompts)
+    try:
+        prompts = load_prompts(a.prompts)
+    except (OSError, ValueError) as e:
+        # A missing or broken prompts file should give one clear line, not a Python traceback.
+        sys.exit(f"Could not load prompts: {e}")
     langs = list(dict.fromkeys(l.strip() for l in a.langs.split(",") if l.strip()))  # drop repeats, keep order
     unknown = [l for l in langs if l not in LANGS]
     if unknown or not langs:
