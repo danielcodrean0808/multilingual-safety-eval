@@ -92,6 +92,13 @@ def test_whitespace_only_translation_is_rejected(tmp_path):
         m.load_prompts(str(bad))
 
 
+def test_prompts_file_saved_with_excel_bom_loads(tmp_path):
+    f = tmp_path / "prompts.csv"
+    f.write_text("id,category,en,ro,ru\np1,medical,Hello,Salut,Privet\n", encoding="utf-8-sig")
+    rows = m.load_prompts(str(f))
+    assert rows[0]["id"] == "p1"
+
+
 def test_http_error_message_includes_the_api_error_text(monkeypatch):
     import io
     import urllib.error

@@ -13,7 +13,9 @@ FIELDS = ["timestamp", "model", "prompt_id", "category", "lang", "prompt", "resp
 
 
 def load_prompts(path):
-    with open(path, newline="", encoding="utf-8") as f:
+    # utf-8-sig also reads files saved by Excel, which start with a hidden BOM
+    # that would otherwise turn the "id" header into "\ufeffid".
+    with open(path, newline="", encoding="utf-8-sig") as f:
         rows = list(csv.DictReader(f))
     if not rows:
         # Otherwise a run would "succeed" and save empty result files.
