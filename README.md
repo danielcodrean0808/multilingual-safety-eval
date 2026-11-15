@@ -53,6 +53,8 @@ If every request fails (for example a wrong API key or model name), the files ar
 python -m pytest
 ```
 
+The tests and a dry run also run automatically on GitHub for every push and pull request (Python 3.9 and 3.12).
+
 ## Plans
 - Check and finalise the translations
 - Collect first results from ChatGPT, Claude and Grok
