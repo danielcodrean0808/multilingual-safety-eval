@@ -224,3 +224,17 @@ def test_missing_prompts_file_gives_a_clear_error(tmp_path):
         m.main(["--dry-run", "--prompts", str(tmp_path / "nope.csv"), "--out-dir", str(tmp_path / "out")])
     assert "Could not load prompts" in str(exc.value)
     assert not (tmp_path / "out").exists()
+
+
+def test_blank_base_url_falls_back_to_openai(tmp_path, monkeypatch):
+    monkeypatch.setenv("MSEVAL_MODEL", "some-model")
+    monkeypatch.setenv("MSEVAL_API_KEY", "key")
+    monkeypatch.setenv("MSEVAL_BASE_URL", "  ")
+    seen = []
+
+    def fake_client(prompt, model, base_url, api_key):
+        seen.append(base_url)
+        return "ok"
+    monkeypatch.setattr(m, "call_openai_compatible", fake_client)
+    m.main(["--langs", "en", "--out-dir", str(tmp_path)])
+    assert seen and set(seen) == {"https://api.openai.com/v1"}
