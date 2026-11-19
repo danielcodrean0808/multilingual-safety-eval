@@ -121,11 +121,13 @@ def main(argv=None):
     ap.add_argument("--dry-run", action="store_true", help="no network calls; fake responses")
     a = ap.parse_args(argv)
 
-    model = os.environ.get("MSEVAL_MODEL", "dry-run" if a.dry_run else "")
+    # Strip so a key or model name pasted with a trailing space or newline still works.
+    # A newline in the key would otherwise make every request fail with "Invalid header value".
+    model = os.environ.get("MSEVAL_MODEL", "").strip() or ("dry-run" if a.dry_run else "")
     # "or" also covers a variable that is set but blank (e.g. MSEVAL_BASE_URL=""),
     # which would otherwise send every request to "/chat/completions" and fail.
     base_url = os.environ.get("MSEVAL_BASE_URL", "").strip() or "https://api.openai.com/v1"
-    api_key = os.environ.get("MSEVAL_API_KEY", "")
+    api_key = os.environ.get("MSEVAL_API_KEY", "").strip()
     if not a.dry_run and not (model and api_key):
         sys.exit("Set MSEVAL_MODEL and MSEVAL_API_KEY (and MSEVAL_BASE_URL if not OpenAI), or use --dry-run.")
 

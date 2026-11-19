@@ -238,3 +238,24 @@ def test_blank_base_url_falls_back_to_openai(tmp_path, monkeypatch):
     monkeypatch.setattr(m, "call_openai_compatible", fake_client)
     m.main(["--langs", "en", "--out-dir", str(tmp_path)])
     assert seen and set(seen) == {"https://api.openai.com/v1"}
+
+
+def test_key_and_model_pasted_with_spaces_or_newline_are_stripped(tmp_path, monkeypatch):
+    monkeypatch.setenv("MSEVAL_MODEL", " some-model\n")
+    monkeypatch.setenv("MSEVAL_API_KEY", "key\n")
+    seen = []
+
+    def fake_client(prompt, model, base_url, api_key):
+        seen.append((model, api_key))
+        return "ok"
+    monkeypatch.setattr(m, "call_openai_compatible", fake_client)
+    m.main(["--langs", "en", "--out-dir", str(tmp_path)])
+    assert seen and set(seen) == {("some-model", "key")}
+
+
+def test_blank_api_key_stops_before_any_call(tmp_path, monkeypatch):
+    monkeypatch.setenv("MSEVAL_MODEL", "some-model")
+    monkeypatch.setenv("MSEVAL_API_KEY", "   ")
+    with pytest.raises(SystemExit, match="MSEVAL_API_KEY"):
+        m.main(["--out-dir", str(tmp_path)])
+    assert not tmp_path.exists() or list(tmp_path.iterdir()) == []
