@@ -259,3 +259,19 @@ def test_blank_api_key_stops_before_any_call(tmp_path, monkeypatch):
     with pytest.raises(SystemExit, match="MSEVAL_API_KEY"):
         m.main(["--out-dir", str(tmp_path)])
     assert not tmp_path.exists() or list(tmp_path.iterdir()) == []
+
+
+def test_base_url_that_already_ends_in_chat_completions_is_not_doubled(monkeypatch):
+    import io
+    import json
+
+    seen = []
+
+    def fake_urlopen(req, timeout=60):
+        seen.append(req.full_url)
+        return io.BytesIO(json.dumps({"choices": [{"message": {"content": "ok"}}]}).encode())
+
+    monkeypatch.setattr(m.urllib.request, "urlopen", fake_urlopen)
+    for base in ["https://api.example.com/v1", "https://api.example.com/v1/chat/completions/"]:
+        assert m.call_openai_compatible("hi", "model", base, "key") == "ok"
+    assert seen == ["https://api.example.com/v1/chat/completions"] * 2

@@ -44,8 +44,13 @@ def call_openai_compatible(prompt, model, base_url, api_key, timeout=60):
         "messages": [{"role": "user", "content": prompt}],
         "temperature": 0,
     }).encode()
+    url = base_url.rstrip("/")
+    # A full endpoint URL pasted into MSEVAL_BASE_URL would otherwise become
+    # ".../chat/completions/chat/completions" and every request would fail with 404.
+    if not url.endswith("/chat/completions"):
+        url += "/chat/completions"
     req = urllib.request.Request(
-        base_url.rstrip("/") + "/chat/completions",
+        url,
         data=body,
         headers={"Content-Type": "application/json", "Authorization": f"Bearer {api_key}"},
     )

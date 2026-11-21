@@ -36,7 +36,7 @@ Run against a real model by setting environment variables. Never commit API keys
 ```bash
 export MSEVAL_API_KEY="your-key"
 export MSEVAL_MODEL="model-name"
-export MSEVAL_BASE_URL="https://api.openai.com/v1"   # or any OpenAI-compatible endpoint; if unset or blank, OpenAI is used
+export MSEVAL_BASE_URL="https://api.openai.com/v1"   # or any OpenAI-compatible endpoint; if unset or blank, OpenAI is used. A full URL ending in /chat/completions also works
 python -m mseval.run
 ```
 
