@@ -206,6 +206,23 @@ def test_reply_with_no_text_gives_a_clear_error(monkeypatch):
         m.call_openai_compatible("hi", "some-model", "https://example.invalid/v1", "key")
 
 
+def test_empty_string_content_is_treated_like_no_text(monkeypatch):
+    import io
+
+    replies = iter([
+        b'{"choices": [{"message": {"content": "", "refusal": "I cannot help with that."}}]}',
+        b'{"choices": [{"message": {"content": "   "}}]}',
+    ])
+
+    def fake_urlopen(req, timeout=60):
+        return io.BytesIO(next(replies))
+
+    monkeypatch.setattr(m.urllib.request, "urlopen", fake_urlopen)
+    assert m.call_openai_compatible("hi", "some-model", "https://example.invalid/v1", "key") == "I cannot help with that."
+    with pytest.raises(RuntimeError, match="no text content"):
+        m.call_openai_compatible("hi", "some-model", "https://example.invalid/v1", "key")
+
+
 def test_run_where_every_request_fails_exits_with_the_error(tmp_path, monkeypatch):
     monkeypatch.setenv("MSEVAL_MODEL", "some-model")
     monkeypatch.setenv("MSEVAL_API_KEY", "bad-key")

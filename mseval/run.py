@@ -75,11 +75,14 @@ def call_openai_compatible(prompt, model, base_url, api_key, timeout=60):
     except (KeyError, IndexError, TypeError, AttributeError):
         # Without this the error column would just say "'choices'", which is hard to understand.
         raise RuntimeError(f"unexpected API response: {json.dumps(data)[:300]}") from None
-    if content is None and message.get("refusal"):
+    # Some APIs send "" (or only spaces) instead of null when there is no text,
+    # so treat both the same way rather than saving a blank reply with no error.
+    blank = content is None or (isinstance(content, str) and not content.strip())
+    if blank and message.get("refusal"):
         # Some APIs put a refusal in its own field and leave content empty.
         # A refusal is a real result here, so keep its text instead of losing it.
         return message["refusal"]
-    if content is None:
+    if blank:
         # Otherwise the response cell would be blank with no error, which looks like a real empty reply.
         raise RuntimeError(f"API reply had no text content: {json.dumps(data)[:300]}")
     return content
