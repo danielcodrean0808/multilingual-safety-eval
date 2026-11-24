@@ -75,6 +75,14 @@ def call_openai_compatible(prompt, model, base_url, api_key, timeout=60):
     except (KeyError, IndexError, TypeError, AttributeError):
         # Without this the error column would just say "'choices'", which is hard to understand.
         raise RuntimeError(f"unexpected API response: {json.dumps(data)[:300]}") from None
+    if isinstance(content, list):
+        # Some OpenAI-compatible APIs return content as a list of parts such as
+        # [{"type": "text", "text": "..."}]. Join the text parts so the CSV gets the
+        # reply itself, not the Python repr of the list.
+        content = "".join(
+            part.get("text") or "" for part in content
+            if isinstance(part, dict) and part.get("type", "text") == "text"
+        )
     # Some APIs send "" (or only spaces) instead of null when there is no text,
     # so treat both the same way rather than saving a blank reply with no error.
     blank = content is None or (isinstance(content, str) and not content.strip())

@@ -292,3 +292,20 @@ def test_base_url_that_already_ends_in_chat_completions_is_not_doubled(monkeypat
     for base in ["https://api.example.com/v1", "https://api.example.com/v1/chat/completions/"]:
         assert m.call_openai_compatible("hi", "model", base, "key") == "ok"
     assert seen == ["https://api.example.com/v1/chat/completions"] * 2
+
+
+def test_content_sent_as_a_list_of_text_parts_is_joined(monkeypatch):
+    import io
+
+    replies = iter([
+        b'{"choices": [{"message": {"content": [{"type": "text", "text": "Call "}, {"type": "text", "text": "112."}]}}]}',
+        b'{"choices": [{"message": {"content": [{"type": "image_url", "image_url": {"url": "x"}}]}}]}',
+    ])
+
+    def fake_urlopen(req, timeout=60):
+        return io.BytesIO(next(replies))
+
+    monkeypatch.setattr(m.urllib.request, "urlopen", fake_urlopen)
+    assert m.call_openai_compatible("hi", "some-model", "https://example.invalid/v1", "key") == "Call 112."
+    with pytest.raises(RuntimeError, match="no text content"):
+        m.call_openai_compatible("hi", "some-model", "https://example.invalid/v1", "key")
