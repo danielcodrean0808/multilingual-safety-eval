@@ -9,7 +9,7 @@ Most AI safety testing happens in English, and research such as [Yong et al. (20
 ## What it does
 1. Reads prompts from `prompts.csv` (each prompt in `en`, `ro` and `ru`).
 2. Sends every prompt in every language to an OpenAI-compatible chat API.
-3. Saves the replies to `results/responses_<model>_<time>.csv`.
+3. Saves the replies to `results/responses_<model>_<time>.csv` (UTF-8 with a BOM, so Excel shows Romanian and Russian text correctly).
 4. Creates `results/scoring_<model>_<time>.csv` with empty columns for manual scoring (see [scoring_guide.md](scoring_guide.md)).
 
 ## The prompts

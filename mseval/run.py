@@ -117,7 +117,9 @@ def run(prompts, langs, model, client, base_url="", api_key=""):
 
 def write_csv(rows, path, fields=FIELDS):
     os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
-    with open(path, "w", newline="", encoding="utf-8") as f:
+    # utf-8-sig adds a BOM so Excel opens the file as UTF-8. Without it Excel
+    # shows Romanian letters (ă, ș, ț) and Russian text as garbled characters.
+    with open(path, "w", newline="", encoding="utf-8-sig") as f:
         w = csv.DictWriter(f, fieldnames=fields)
         w.writeheader()
         w.writerows(rows)

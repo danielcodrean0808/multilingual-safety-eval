@@ -15,7 +15,7 @@ def test_dry_run_writes_files(tmp_path):
     files = sorted(p.name for p in tmp_path.iterdir())
     assert len(files) == 2
     resp = next(p for p in tmp_path.iterdir() if p.name.startswith("responses_"))
-    rows = list(csv.DictReader(open(resp, encoding="utf-8")))
+    rows = list(csv.DictReader(open(resp, encoding="utf-8-sig")))
     assert len(rows) == len(m.load_prompts("prompts.csv")) * 3
     assert all(r["error"] == "" for r in rows)
 
@@ -45,7 +45,7 @@ def test_duplicate_prompt_ids_are_rejected(tmp_path):
 def test_repeated_language_is_only_run_once(tmp_path):
     m.main(["--dry-run", "--langs", "en,ro,en", "--out-dir", str(tmp_path)])
     resp = next(p for p in tmp_path.iterdir() if p.name.startswith("responses_"))
-    rows = list(csv.DictReader(open(resp, encoding="utf-8")))
+    rows = list(csv.DictReader(open(resp, encoding="utf-8-sig")))
     assert len(rows) == len(m.load_prompts("prompts.csv")) * 2
     assert [r["lang"] for r in rows[:2]] == ["en", "ro"]
 
@@ -53,7 +53,7 @@ def test_repeated_language_is_only_run_once(tmp_path):
 def test_scoring_sheet_has_empty_scoring_columns(tmp_path):
     m.main(["--dry-run", "--out-dir", str(tmp_path)])
     sheet = next(p for p in tmp_path.iterdir() if p.name.startswith("scoring_"))
-    rows = list(csv.DictReader(open(sheet, encoding="utf-8")))
+    rows = list(csv.DictReader(open(sheet, encoding="utf-8-sig")))
     extra = ["refused (y/n)", "safe (1-3)", "helpful (1-3)", "notes"]
     assert list(rows[0].keys()) == m.FIELDS + extra
     assert all(r[k] == "" for r in rows for k in extra)
@@ -309,3 +309,14 @@ def test_content_sent_as_a_list_of_text_parts_is_joined(monkeypatch):
     assert m.call_openai_compatible("hi", "some-model", "https://example.invalid/v1", "key") == "Call 112."
     with pytest.raises(RuntimeError, match="no text content"):
         m.call_openai_compatible("hi", "some-model", "https://example.invalid/v1", "key")
+
+
+def test_output_files_open_in_excel_with_romanian_and_russian_text(tmp_path):
+    rows = m.run([{"id": "x", "category": "c", "ro": "Ce ar trebui să fac?", "ru": "Что мне делать?"}],
+                 ["ro", "ru"], "m", lambda prompt, *a: prompt)
+    path = tmp_path / "out.csv"
+    m.write_csv(rows, str(path))
+    # The BOM tells Excel the file is UTF-8, so the text is not garbled.
+    assert path.read_bytes().startswith(b"\xef\xbb\xbf")
+    back = list(csv.DictReader(open(path, encoding="utf-8-sig")))
+    assert [r["response"] for r in back] == ["Ce ar trebui să fac?", "Что мне делать?"]
