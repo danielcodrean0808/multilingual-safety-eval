@@ -5,11 +5,15 @@ import datetime as dt
 import json
 import os
 import sys
+import time
 import urllib.error
 import urllib.request
 
 LANGS = ["en", "ro", "ru"]
 FIELDS = ["timestamp", "model", "prompt_id", "category", "lang", "prompt", "response", "error"]
+# Rate limits (429) and temporary server errors (5xx) often pass after a short wait.
+RETRY_STATUS = {429, 500, 502, 503, 504}
+MAX_ATTEMPTS = 3
 
 
 def load_prompts(path):
@@ -35,6 +39,15 @@ def load_prompts(path):
     return rows
 
 
+def retry_wait(error, attempt):
+    """Seconds to wait before retrying: the API's Retry-After if it gives one, else 2, 4, ..."""
+    try:
+        wait = float((error.headers or {}).get("Retry-After"))
+    except (TypeError, ValueError):
+        wait = 2 ** attempt
+    return min(max(wait, 0), 30)
+
+
 def call_openai_compatible(prompt, model, base_url, api_key, timeout=60):
     """POST to {base_url}/chat/completions. Works with any OpenAI-compatible endpoint."""
     # Temperature 0 keeps replies more stable, so differences across languages
@@ -54,16 +67,23 @@ def call_openai_compatible(prompt, model, base_url, api_key, timeout=60):
         data=body,
         headers={"Content-Type": "application/json", "Authorization": f"Bearer {api_key}"},
     )
-    try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
-            raw = resp.read()
-    except urllib.error.HTTPError as e:
-        # The API's own error text (e.g. "invalid model") is more useful than just "HTTP Error 400".
-        detail = e.read().decode("utf-8", "replace").strip()[:300]
-        raise RuntimeError(f"HTTP {e.code}: {detail or e.reason}") from None
-    except urllib.error.URLError as e:
-        # Timeouts and DNS failures otherwise look like a generic urlopen crash.
-        raise RuntimeError(f"could not reach API: {e.reason}") from None
+    for attempt in range(1, MAX_ATTEMPTS + 1):
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                raw = resp.read()
+            break
+        except urllib.error.HTTPError as e:
+            if e.code in RETRY_STATUS and attempt < MAX_ATTEMPTS:
+                # Without a retry, a short rate limit in the middle of a run would
+                # leave a gap in the results for that prompt and language.
+                time.sleep(retry_wait(e, attempt))
+                continue
+            # The API's own error text (e.g. "invalid model") is more useful than just "HTTP Error 400".
+            detail = e.read().decode("utf-8", "replace").strip()[:300]
+            raise RuntimeError(f"HTTP {e.code}: {detail or e.reason}") from None
+        except urllib.error.URLError as e:
+            # Timeouts and DNS failures otherwise look like a generic urlopen crash.
+            raise RuntimeError(f"could not reach API: {e.reason}") from None
     try:
         data = json.loads(raw)
     except json.JSONDecodeError:

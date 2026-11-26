@@ -44,6 +44,8 @@ Options: `--prompts FILE`, `--langs en,ro`, `--out-dir DIR`, `--dry-run` (no net
 
 Each request uses temperature 0, so the model is less random and replies in English, Romanian and Russian are easier to compare.
 
+If the API says it is rate limited (HTTP 429) or has a temporary server error (500, 502, 503, 504), the request is tried up to 3 times, waiting a few seconds between tries (or as long as the API's Retry-After header asks, up to 30 seconds).
+
 If a single request fails, the run carries on and the error text is saved in the `error` column of the results, so check that column before scoring.
 
 If every request fails (for example a wrong API key or model name), the files are still saved but the run exits with an error showing the first failure.

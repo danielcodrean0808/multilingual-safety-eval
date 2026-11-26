@@ -320,3 +320,61 @@ def test_output_files_open_in_excel_with_romanian_and_russian_text(tmp_path):
     assert path.read_bytes().startswith(b"\xef\xbb\xbf")
     back = list(csv.DictReader(open(path, encoding="utf-8-sig")))
     assert [r["response"] for r in back] == ["Ce ar trebui să fac?", "Что мне делать?"]
+
+
+def test_rate_limited_request_is_retried_then_succeeds(monkeypatch):
+    import io
+    import json
+    import urllib.error
+    calls, waits = [], []
+
+    class Resp(io.BytesIO):
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+    def fake_urlopen(req, timeout=60):
+        calls.append(1)
+        if len(calls) == 1:
+            raise urllib.error.HTTPError(req.full_url, 429, "Too Many Requests",
+                                         {"Retry-After": "1"}, io.BytesIO(b"slow down"))
+        return Resp(json.dumps({"choices": [{"message": {"content": "ok"}}]}).encode())
+    monkeypatch.setattr(m.urllib.request, "urlopen", fake_urlopen)
+    monkeypatch.setattr(m.time, "sleep", waits.append)
+    assert m.call_openai_compatible("hi", "m", "https://x/v1", "k") == "ok"
+    assert len(calls) == 2
+    assert waits == [1.0]
+
+
+def test_rate_limit_that_never_clears_gives_the_api_error(monkeypatch):
+    import io
+    import urllib.error
+    calls, waits = [], []
+
+    def fake_urlopen(req, timeout=60):
+        calls.append(1)
+        raise urllib.error.HTTPError(req.full_url, 429, "Too Many Requests", {},
+                                     io.BytesIO(b"rate limit reached"))
+    monkeypatch.setattr(m.urllib.request, "urlopen", fake_urlopen)
+    monkeypatch.setattr(m.time, "sleep", waits.append)
+    with pytest.raises(RuntimeError, match="HTTP 429: rate limit reached"):
+        m.call_openai_compatible("hi", "m", "https://x/v1", "k")
+    assert len(calls) == m.MAX_ATTEMPTS
+    assert waits == [2, 4]
+
+
+def test_client_errors_like_a_bad_key_are_not_retried(monkeypatch):
+    import io
+    import urllib.error
+    calls = []
+
+    def fake_urlopen(req, timeout=60):
+        calls.append(1)
+        raise urllib.error.HTTPError(req.full_url, 401, "Unauthorized", {}, io.BytesIO(b"bad key"))
+    monkeypatch.setattr(m.urllib.request, "urlopen", fake_urlopen)
+    monkeypatch.setattr(m.time, "sleep", lambda s: pytest.fail("should not wait"))
+    with pytest.raises(RuntimeError, match="HTTP 401"):
+        m.call_openai_compatible("hi", "m", "https://x/v1", "k")
+    assert len(calls) == 1
