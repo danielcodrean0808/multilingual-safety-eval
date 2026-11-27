@@ -48,6 +48,8 @@ If the API says it is rate limited (HTTP 429) or has a temporary server error (5
 
 If a single request fails, the run carries on and the error text is saved in the `error` column of the results, so check that column before scoring.
 
+If you stop a run with Ctrl+C, the replies collected so far are still saved.
+
 If every request fails (for example a wrong API key or model name), the files are still saved but the run exits with an error showing the first failure.
 
 ## Tests

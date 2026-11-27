@@ -122,16 +122,22 @@ def dry_run_client(prompt, model, base_url, api_key):
 
 def run(prompts, langs, model, client, base_url="", api_key=""):
     out = []
-    for p in prompts:
-        for lang in langs:
-            row = {"timestamp": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
-                   "model": model, "prompt_id": p["id"], "category": p["category"],
-                   "lang": lang, "prompt": p[lang], "response": "", "error": ""}
-            try:
-                row["response"] = client(p[lang], model, base_url, api_key)
-            except Exception as e:  # keep going; record the failure
-                row["error"] = str(e)
-            out.append(row)
+    try:
+        for p in prompts:
+            for lang in langs:
+                row = {"timestamp": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
+                       "model": model, "prompt_id": p["id"], "category": p["category"],
+                       "lang": lang, "prompt": p[lang], "response": "", "error": ""}
+                try:
+                    row["response"] = client(p[lang], model, base_url, api_key)
+                except Exception as e:  # keep going; record the failure
+                    row["error"] = str(e)
+                out.append(row)
+    except KeyboardInterrupt:
+        # Results are only written at the end, so without this, pressing Ctrl+C
+        # during a long run would throw away every reply collected so far.
+        print(f"Stopped early after {len(out)} requests; saving the replies collected so far.",
+              file=sys.stderr)
     return out
 
 

@@ -378,3 +378,18 @@ def test_client_errors_like_a_bad_key_are_not_retried(monkeypatch):
     with pytest.raises(RuntimeError, match="HTTP 401"):
         m.call_openai_compatible("hi", "m", "https://x/v1", "k")
     assert len(calls) == 1
+
+
+def test_ctrl_c_keeps_the_replies_collected_so_far():
+    calls = []
+
+    def client(prompt, *a):
+        calls.append(prompt)
+        if len(calls) == 3:
+            raise KeyboardInterrupt
+        return "ok"
+    prompts = [{"id": "x", "category": "c", "en": "hi", "ro": "salut"},
+               {"id": "y", "category": "c", "en": "bye", "ro": "pa"}]
+    rows = m.run(prompts, ["en", "ro"], "m", client)
+    assert [(r["prompt_id"], r["lang"]) for r in rows] == [("x", "en"), ("x", "ro")]
+    assert all(r["response"] == "ok" for r in rows)
